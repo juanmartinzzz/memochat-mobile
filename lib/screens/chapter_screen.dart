@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:memochat/data/constants.dart';
+// import 'package:memochat/data/groups.dart';
 import 'package:memochat/data/messages.dart';
 import 'package:memochat/models/chat_message.dart';
-import 'package:memochat/components/message_bubble.dart';
+// import 'package:memochat/models/group.dart';
+import 'package:memochat/widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   final Chapter chapter;
@@ -18,6 +20,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
 
   Future<void> _loadMessages() async {
+    // await MessagesService.clearLocalMessages("IOU real User ID", widget.chapter.id);
     messages = await MessagesService.syncAndGetMessages("IOU real User ID", widget.chapter.id);
     setState(() {}); // Update the UI after loading messages
   }
@@ -26,6 +29,13 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _loadMessages();
+
+    // GroupsService.addGroup(Group(
+    //   id: widget.chapter.id,
+    //   name: widget.chapter.name,
+    //   description: widget.chapter.description,
+    //   creatorId: 'IOU real User ID',
+    // ));
   }
 
   @override
@@ -89,8 +99,18 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(width: 8),
           IconButton(
-            onPressed: () {
-              // Handle send message
+            onPressed: () async {
+              final messageContent = _messageController.text.trim();
+              if (messageContent.isNotEmpty) {
+                final newMessage = ChatMessage(
+                  senderId: 'currentUserId', // Replace with actual user ID
+                  content: messageContent,
+                  senderAvatar: '⭐️', // Replace with actual avatar URL
+                );
+                await MessagesService.addMessage(widget.chapter.id, newMessage);
+                _messageController.clear(); // Clear input field
+                _loadMessages();
+              }
             },
             icon: Icon(
               Icons.send,

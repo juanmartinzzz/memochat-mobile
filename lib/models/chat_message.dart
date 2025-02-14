@@ -1,17 +1,17 @@
 class ChatMessage {
-  final String id;
-  final String sender;
+  final String? id; // id nullable
   final String content;
-  final DateTime timestamp;
-  final bool isMe;
+  final String senderId;
   final String senderAvatar;
+  final DateTime? createdAt; // createdAt nullable
+  final DateTime? updatedAt; // updatedAt nullable
 
   ChatMessage({
-    required this.id,
-    required this.sender,
+    this.id,
     required this.content,
-    required this.timestamp,
-    required this.isMe,
+    required this.senderId,
     required this.senderAvatar,
+    this.createdAt,
+    this.updatedAt,
   });
 }

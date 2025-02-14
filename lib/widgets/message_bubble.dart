@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/chat_message.dart';
+import 'package:flutter/material.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
@@ -16,9 +16,9 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment:
-            message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            message.senderId == 'SupabaseService.userId' ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          if (!message.isMe) ...[
+          if (message.senderId != 'SupabaseService.userId') ...[
             Text(
               message.senderAvatar,
               style: const TextStyle(fontSize: 24),
@@ -32,7 +32,7 @@ class MessageBubble extends StatelessWidget {
                 vertical: 10,
               ),
               decoration: BoxDecoration(
-                color: message.isMe
+                color: message.senderId == 'SupabaseService.userId'
                     ? Theme.of(context).colorScheme.primary
                     : Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
@@ -40,12 +40,12 @@ class MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!message.isMe)
+                  if (message.senderId != 'SupabaseService.userId')
                     Text(
-                      message.sender,
+                      message.senderAvatar,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: message.isMe
+                          color: message.senderId == 'SupabaseService.userId'
                             ? Colors.white
                             : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -53,16 +53,16 @@ class MessageBubble extends StatelessWidget {
                   Text(
                     message.content,
                     style: TextStyle(
-                      color: message.isMe
+                      color: message.senderId == 'SupabaseService.userId'
                           ? Colors.white
                           : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
-                    DateFormat('HH:mm').format(message.timestamp),
+                    DateFormat('HH:mm').format(message.createdAt ?? DateTime.now()),
                     style: TextStyle(
                       fontSize: 12,
-                      color: message.isMe
+                      color: message.senderId == 'SupabaseService.userId'
                           ? Colors.white70
                           : Theme.of(context)
                               .colorScheme
@@ -74,7 +74,7 @@ class MessageBubble extends StatelessWidget {
               ),
             ),
           ),
-          if (message.isMe) ...[
+          if (message.senderId == 'SupabaseService.userId') ...[
             const SizedBox(width: 8),
             PopupMenuButton<String>(
               icon: Icon(

@@ -1,12 +1,14 @@
-import 'package:memochat/screens/chapter_screen.dart';
-
+import 'integrations/supabase.dart';
 import 'screens/chapters_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:memochat/data/constants.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:memochat/screens/chapter_screen.dart';
 
-void main() {
+Future<void> main() async {
+  await SupabaseService.initialize();
+
   runApp(MyApp());
 }
 

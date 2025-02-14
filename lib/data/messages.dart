@@ -1,11 +1,33 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import '../models/chat_message.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MessagesService {
-  static const String _baseUrl = 'https://future.endpoint';
   static const String _messagesKey = 'messages';
+
+  /// Add a message to remote DB
+  static Future<void> addMessage(String chapterId, ChatMessage message) async {
+    try {
+      await Supabase.instance.client
+          .from('chat_messages')
+          .insert({
+            'group_id': chapterId,
+            'content': message.content,
+            'sender_id': message.senderId,
+            'sender_avatar': message.senderAvatar,
+          });
+    } catch (e) {
+      print('Error sending message to API: $e');
+    }
+  }
+
+  /// Cleans all local messages for a specific group
+  static Future<void> clearLocalMessages(String chapterId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${_messagesKey}_$chapterId';
+    await prefs.remove(key);
+  }
 
   /// Retrieves messages from local storage for a specific user and chapter
   static Future<List<ChatMessage>> getLocalMessages(
@@ -21,11 +43,11 @@ class MessagesService {
       return decodedData
           .map((messageData) => ChatMessage(
                 id: messageData['id'],
-                sender: messageData['sender'],
+                senderId: messageData['senderId'],
                 content: messageData['content'],
-                timestamp: DateTime.parse(messageData['timestamp']),
-                isMe: messageData['isMe'],
                 senderAvatar: messageData['senderAvatar'],
+                createdAt: DateTime.parse(messageData['createdAt']),
+                updatedAt: DateTime.parse(messageData['updatedAt']),
               ))
           .toList();
     } catch (e) {
@@ -37,39 +59,46 @@ class MessagesService {
   /// Retrieves messages from the API for a specific user and chapter
   static Future<List<ChatMessage>> getApiMessages(
       String userId, String chapterId) async {
+
+    String firstMessage = 'Initial value';
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/getMessages/$userId/$chapterId'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      final data = await Supabase.instance.client
+          .from('chat_messages')
+          .select()
+          .eq('group_id', chapterId);
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to load messages from API');
-      }
+      print('API messages: ${data.length}');
+      print('API messages: ${data[0]}');
 
-      final List<dynamic> decodedData = json.decode(response.body);
-      return decodedData
+      return data
           .map((messageData) => ChatMessage(
-                id: messageData['id'],
-                sender: messageData['sender'],
-                content: messageData['content'],
-                timestamp: DateTime.parse(messageData['timestamp']),
-                isMe: messageData['isMe'],
-                senderAvatar: messageData['senderAvatar'],
+                id: messageData['id'] ?? '',
+                senderId: messageData['sender_id'] ?? '',
+                content: messageData['content'] ?? '',
+                createdAt: DateTime.parse(messageData['created_at'] ?? DateTime.now().toIso8601String()),
+                updatedAt: DateTime.parse(messageData['updated_at'] ?? DateTime.now().toIso8601String()),
+                senderAvatar: messageData['sender_avatar'] ?? '',
               ))
           .toList();
     } catch (e) {
-      print('Error retrieving API messages: $e');
-      return [];
+      firstMessage = 'Error retrieving messages: $e';
+      print('Error retrieving messages: $e');
+      return [
+        ChatMessage(id: '11', senderId: 'FunnyBot', content: firstMessage, createdAt: DateTime.now().subtract(const Duration(minutes: 27)), updatedAt: DateTime.now(), senderAvatar: '👩',),
+      ];
     }
   }
 
   /// Syncs messages between local storage and API, returns most recent 15 messages
   static Future<List<ChatMessage>> syncAndGetMessages(
-      String userId, String chapterId) async {
+      String userId, String chapterId, {bool bypassApi = false}) async {
     // Get messages from both sources
     final localMessages = await getLocalMessages(userId, chapterId);
-    final apiMessages = await getApiMessages(userId, chapterId);
+    List<ChatMessage> apiMessages = [];
+
+    if (!bypassApi) {
+      apiMessages = await getApiMessages(userId, chapterId);
+    }
 
     // Find new messages from API that aren't in local storage
     final newMessages = apiMessages.where((apiMessage) =>
@@ -85,10 +114,10 @@ class MessagesService {
       final jsonData = json.encode(updatedMessages
           .map((msg) => {
                 'id': msg.id,
-                'sender': msg.sender,
+                'senderId': msg.senderId,
                 'content': msg.content,
-                'timestamp': msg.timestamp.toIso8601String(),
-                'isMe': msg.isMe,
+                'createdAt': msg.createdAt?.toIso8601String(),
+                'updatedAt': msg.updatedAt?.toIso8601String(),
                 'senderAvatar': msg.senderAvatar,
               })
           .toList());
@@ -98,7 +127,7 @@ class MessagesService {
 
     // Combine and sort all messages by timestamp
     final allMessages = [...localMessages, ...newMessages];
-    allMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    allMessages.sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
 
     // Return only the 15 most recent messages
     return allMessages.take(15).toList();
