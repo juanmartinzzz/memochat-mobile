@@ -36,7 +36,7 @@ class ChaptersScreen extends StatelessWidget {
               title: chapter.name,
               description: chapter.description,
               stats: chapter.stats,
-              onTap: () => onChapterSelected(index + 1),
+              onTap: () => onChapterSelected(index + 2),
             );
           },
         ),

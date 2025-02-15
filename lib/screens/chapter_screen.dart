@@ -7,6 +7,7 @@ import 'package:memochat/data/constants.dart';
 import 'package:memochat/environment.dart';
 import 'package:memochat/models/chat_message.dart';
 import 'package:memochat/widgets/message_bubble.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final Chapter chapter;
@@ -19,6 +20,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   bool _isRecording = false;
   List<ChatMessage> messages = [];
+  final _supabase = Supabase.instance.client;
   final TextEditingController _messageController = TextEditingController();
 
   Future<void> _loadMessages() async {
@@ -77,6 +79,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildMessageInput() {
+    final user = _supabase.auth.currentUser;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -115,9 +119,8 @@ class _ChatScreenState extends State<ChatScreen> {
               final messageContent = _messageController.text.trim();
               if (messageContent.isNotEmpty) {
                 final newMessage = ChatMessage(
-                  senderId: 'currentUserId', // Replace with actual user ID
+                  senderId: user?.id ?? 'anonymous',
                   content: messageContent,
-                  senderAvatar: '⭐️', // Replace with actual avatar URL
                 );
                 await MessagesService.addMessage(chapterId: widget.chapter.id, message: newMessage);
                 _messageController.clear(); // Clear input field

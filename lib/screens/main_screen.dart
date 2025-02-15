@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:memochat/data/constants.dart';
 import 'package:memochat/screens/chapter_screen.dart';
 import 'package:memochat/screens/chapters_screen.dart';
+import 'package:memochat/screens/profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -18,14 +19,17 @@ Color _getChapterIconColor(BuildContext context, Chapter chapter) {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  var selectedIndex = 0;
+  var selectedIndex = 1;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
+
       Widget extendedScreen;
       switch (selectedIndex) {
         case 0:
+          extendedScreen = ProfileScreen();
+        case 1:
           extendedScreen = ChaptersScreen(
             onChapterSelected: (chapterIndex) {
               setState(() {
@@ -33,7 +37,6 @@ class _MainScreenState extends State<MainScreen> {
               });
             },
           );
-        case 1:
         case 2:
         case 3:
         case 4:
@@ -46,7 +49,8 @@ class _MainScreenState extends State<MainScreen> {
         case 11:
         case 12:
         case 13:
-          extendedScreen = ChatScreen(chapter: chaptersList[selectedIndex - 1]);
+        case 14:
+          extendedScreen = ChatScreen(chapter: chaptersList[selectedIndex - 2]);
         default:
           throw UnimplementedError('no widget for $selectedIndex');
       }
@@ -66,6 +70,10 @@ class _MainScreenState extends State<MainScreen> {
               child: NavigationRail(
                 extended: constraints.maxWidth >= widthForMobile,
                 destinations: [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.person),
+                    label: Text('Profile'),
+                  ),
                   NavigationRailDestination(
                     icon: Icon(Icons.home),
                     label: Text('Home'),

@@ -7,16 +7,14 @@ class MessagesService {
   static const String _messagesKey = 'messages';
 
   /// Add a message to remote DB
-  static Future<void> addMessage({required String chapterId, required ChatMessage message}) async {
+  static Future<void> addMessage(
+      {required String chapterId, required ChatMessage message}) async {
     try {
-      await Supabase.instance.client
-          .from('chat_messages')
-          .insert({
-            'group_id': chapterId,
-            'content': message.content,
-            'sender_id': message.senderId,
-            'sender_avatar': message.senderAvatar,
-          });
+      await Supabase.instance.client.from('chat_messages').insert({
+        'group_id': chapterId,
+        'content': message.content,
+        'sender_id': message.senderId,
+      });
     } catch (e) {
       print('Error sending message to API: $e');
     }
@@ -30,7 +28,8 @@ class MessagesService {
   }
 
   /// Retrieves messages from local storage for a specific chapter
-  static Future<List<ChatMessage>> getLocalMessages({required String chapterId}) async {
+  static Future<List<ChatMessage>> getLocalMessages(
+      {required String chapterId}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = '${_messagesKey}_$chapterId';
@@ -44,7 +43,6 @@ class MessagesService {
                 id: messageData['id'],
                 senderId: messageData['senderId'],
                 content: messageData['content'],
-                senderAvatar: messageData['senderAvatar'],
                 createdAt: DateTime.parse(messageData['createdAt']),
                 updatedAt: DateTime.parse(messageData['updatedAt']),
               ))
@@ -56,7 +54,8 @@ class MessagesService {
   }
 
   /// Retrieves messages from the API for a specific user and chapter
-  static Future<List<ChatMessage>> getRemoteMessages({required String chapterId}) async {
+  static Future<List<ChatMessage>> getRemoteMessages(
+      {required String chapterId}) async {
     String firstMessage = 'Initial value';
     try {
       final data = await Supabase.instance.client
@@ -69,22 +68,32 @@ class MessagesService {
                 id: messageData['id'] ?? '',
                 senderId: messageData['sender_id'] ?? '',
                 content: messageData['content'] ?? '',
-                createdAt: DateTime.parse(messageData['created_at'] ?? DateTime.now().toIso8601String()),
-                updatedAt: DateTime.parse(messageData['updated_at'] ?? DateTime.now().toIso8601String()),
-                senderAvatar: messageData['sender_avatar'] ?? '',
+                createdAt: DateTime.parse(messageData['created_at'] ??
+                    DateTime.now().toIso8601String()),
+                updatedAt: DateTime.parse(messageData['updated_at'] ??
+                    DateTime.now().toIso8601String()),
               ))
           .toList();
     } catch (e) {
       firstMessage = 'Error retrieving messages: $e';
       print('Error retrieving messages: $e');
       return [
-        ChatMessage(id: '11', senderId: 'FunnyBot', content: firstMessage, createdAt: DateTime.now().subtract(const Duration(minutes: 27)), updatedAt: DateTime.now(), senderAvatar: '👩',),
+        ChatMessage(
+          id: '11',
+          senderId: 'FunnyBot',
+          content: firstMessage,
+          createdAt: DateTime.now().subtract(const Duration(minutes: 27)),
+          updatedAt: DateTime.now(),
+        ),
       ];
     }
   }
 
   /// Syncs messages between local storage and API, returns most recent 15 messages
-  static Future<List<ChatMessage>> syncAndGetMessages({required String chapterId, bool bypassRemote = false, bool bypassLocal = false}) async {
+  static Future<List<ChatMessage>> syncAndGetMessages(
+      {required String chapterId,
+      bool bypassRemote = false,
+      bool bypassLocal = false}) async {
     if (bypassLocal) {
       // If bypassLocal is true, only get messages from the API
       final remoteMessages = await getRemoteMessages(chapterId: chapterId);
@@ -97,7 +106,7 @@ class MessagesService {
     final localMessages = await getLocalMessages(chapterId: chapterId);
     List<ChatMessage> remoteMessages = [];
 
-    if(!bypassRemote) {
+    if (!bypassRemote) {
       remoteMessages = await getRemoteMessages(chapterId: chapterId);
     }
 
@@ -119,7 +128,6 @@ class MessagesService {
                 'content': msg.content,
                 'createdAt': msg.createdAt?.toIso8601String(),
                 'updatedAt': msg.updatedAt?.toIso8601String(),
-                'senderAvatar': msg.senderAvatar,
               })
           .toList());
 

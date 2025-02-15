@@ -1,14 +1,12 @@
-class ChatMessage {
+class Profile {
   final String? id; // id nullable
-  final String content;
-  final String senderId;
+  final String emoji;
   final DateTime? createdAt; // createdAt nullable
   final DateTime? updatedAt; // updatedAt nullable
 
-  ChatMessage({
+  Profile({
     this.id,
-    required this.content,
-    required this.senderId,
+    required this.emoji,
     this.createdAt,
     this.updatedAt,
   });

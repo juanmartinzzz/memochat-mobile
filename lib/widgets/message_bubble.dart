@@ -1,30 +1,38 @@
 import 'package:intl/intl.dart';
+import 'package:memochat/data/profiles.dart';
 import '../models/chat_message.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
+  final _supabase = Supabase.instance.client;
 
-  const MessageBubble({
+  MessageBubble({
     super.key,
     required this.message,
   });
 
   @override
   Widget build(BuildContext context) {
+    final user = _supabase.auth.currentUser;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment:
-            message.senderId == 'SupabaseService.userId' ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.senderId == user?.id
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
-          if (message.senderId != 'SupabaseService.userId') ...[
-            Text(
-              message.senderAvatar,
-              style: const TextStyle(fontSize: 24),
-            ),
-            const SizedBox(width: 8),
-          ],
+          FutureBuilder<String>(
+            future: ProfilesService.getEmoji(userId: message.senderId),
+            builder: (context, snapshot) {
+              return Text(
+                (snapshot.data ?? ''),
+                style: const TextStyle(fontSize: 24),
+              );
+            },
+          ),
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(
@@ -40,16 +48,6 @@ class MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (message.senderId != 'SupabaseService.userId')
-                    Text(
-                      message.senderAvatar,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                          color: message.senderId == 'SupabaseService.userId'
-                            ? Colors.white
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
                   Text(
                     message.content,
                     style: TextStyle(
@@ -59,7 +57,8 @@ class MessageBubble extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    DateFormat('HH:mm').format(message.createdAt ?? DateTime.now()),
+                    DateFormat('HH:mm')
+                        .format(message.createdAt ?? DateTime.now()),
                     style: TextStyle(
                       fontSize: 12,
                       color: message.senderId == 'SupabaseService.userId'
