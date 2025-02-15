@@ -7,7 +7,7 @@ class MessagesService {
   static const String _messagesKey = 'messages';
 
   /// Add a message to remote DB
-  static Future<void> addMessage(String chapterId, ChatMessage message) async {
+  static Future<void> addMessage({required String chapterId, required ChatMessage message}) async {
     try {
       await Supabase.instance.client
           .from('chat_messages')
@@ -23,18 +23,17 @@ class MessagesService {
   }
 
   /// Cleans all local messages for a specific group
-  static Future<void> clearLocalMessages(String chapterId) async {
+  static Future<void> clearLocalMessages({required String chapterId}) async {
     final prefs = await SharedPreferences.getInstance();
     final key = '${_messagesKey}_$chapterId';
     await prefs.remove(key);
   }
 
-  /// Retrieves messages from local storage for a specific user and chapter
-  static Future<List<ChatMessage>> getLocalMessages(
-      String userId, String chapterId) async {
+  /// Retrieves messages from local storage for a specific chapter
+  static Future<List<ChatMessage>> getLocalMessages({required String chapterId}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final key = '${_messagesKey}_${userId}_$chapterId';
+      final key = '${_messagesKey}_$chapterId';
       final String? storedData = prefs.getString(key);
 
       if (storedData == null) return [];
@@ -57,18 +56,13 @@ class MessagesService {
   }
 
   /// Retrieves messages from the API for a specific user and chapter
-  static Future<List<ChatMessage>> getApiMessages(
-      String userId, String chapterId) async {
-
+  static Future<List<ChatMessage>> getRemoteMessages({required String chapterId}) async {
     String firstMessage = 'Initial value';
     try {
       final data = await Supabase.instance.client
           .from('chat_messages')
           .select()
           .eq('group_id', chapterId);
-
-      print('API messages: ${data.length}');
-      print('API messages: ${data[0]}');
 
       return data
           .map((messageData) => ChatMessage(
@@ -90,24 +84,31 @@ class MessagesService {
   }
 
   /// Syncs messages between local storage and API, returns most recent 15 messages
-  static Future<List<ChatMessage>> syncAndGetMessages(
-      String userId, String chapterId, {bool bypassApi = false}) async {
-    // Get messages from both sources
-    final localMessages = await getLocalMessages(userId, chapterId);
-    List<ChatMessage> apiMessages = [];
+  static Future<List<ChatMessage>> syncAndGetMessages({required String chapterId, bool bypassRemote = false, bool bypassLocal = false}) async {
+    if (bypassLocal) {
+      // If bypassLocal is true, only get messages from the API
+      final remoteMessages = await getRemoteMessages(chapterId: chapterId);
+      remoteMessages.sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
 
-    if (!bypassApi) {
-      apiMessages = await getApiMessages(userId, chapterId);
+      return remoteMessages.toList();
+    }
+
+    // Get messages from both sources
+    final localMessages = await getLocalMessages(chapterId: chapterId);
+    List<ChatMessage> remoteMessages = [];
+
+    if(!bypassRemote) {
+      remoteMessages = await getRemoteMessages(chapterId: chapterId);
     }
 
     // Find new messages from API that aren't in local storage
-    final newMessages = apiMessages.where((apiMessage) =>
+    final newMessages = remoteMessages.where((apiMessage) =>
         !localMessages.any((localMessage) => localMessage.id == apiMessage.id));
 
     if (newMessages.isNotEmpty) {
       // Add new messages to local storage
       final prefs = await SharedPreferences.getInstance();
-      final key = '${_messagesKey}_${userId}_$chapterId';
+      final key = '${_messagesKey}_$chapterId';
       final updatedMessages = [...localMessages, ...newMessages];
 
       // Convert messages to JSON and store
@@ -129,7 +130,7 @@ class MessagesService {
     final allMessages = [...localMessages, ...newMessages];
     allMessages.sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
 
-    // Return only the 15 most recent messages
-    return allMessages.take(15).toList();
+    // Return messages
+    return allMessages.toList();
   }
 }
